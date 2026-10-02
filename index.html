@@ -1,0 +1,85 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover"
+    />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="screen-orientation" content="landscape" />
+    <meta name="theme-color" content="#48cae4" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Nunito:wght@600;700;800;900&display=swap"
+      rel="stylesheet"
+    />
+    <title>Moonlit Grove</title>
+  </head>
+  <body>
+    <div class="shell">
+      <div class="playfield">
+        <main class="stage">
+          <canvas id="farm" width="960" height="540" aria-label="Farm"></canvas>
+
+          <header class="hud">
+            <button type="button" class="avatar-btn" id="daily-btn" title="Daily gift">🎁</button>
+            <div class="chip coin" id="coins-pill">
+              <span class="chip-ico">✦</span>
+              <span id="coins">0</span>
+            </div>
+            <div class="chip lvl">
+              <span class="chip-ico">★</span>
+              <span id="level">1</span>
+            </div>
+            <div class="xp-mini" title="XP">
+              <div class="xp-fill" id="xp-fill"></div>
+            </div>
+          </header>
+
+          <div class="story-pill" id="story-rail"></div>
+          <div class="ready-float" id="ready-badge">0 ready</div>
+          <p class="grove-label" id="grove-title">Your grove</p>
+          <span class="xp-label" id="xp-text" hidden>0/30</span>
+        </main>
+
+        <aside class="sidebar">
+          <nav class="tabbar">
+            <button type="button" class="tab active" data-panel="farm" title="Farm"><span>🌱</span></button>
+            <button type="button" class="tab" data-panel="barn" title="Barn"><span>🐾</span></button>
+            <button type="button" class="tab" data-panel="workshop" title="Craft"><span>⚗️</span></button>
+            <button type="button" class="tab" data-panel="quests" title="Quests"><span>📜</span></button>
+          </nav>
+
+          <section class="sheet" id="sheet">
+            <div class="sheet-head">
+              <h2 id="panel-title">Farm</h2>
+              <p id="panel-sub">Plant → harvest → sell</p>
+            </div>
+            <div class="sheet-body" id="panel-body"></div>
+          </section>
+        </aside>
+      </div>
+
+      <div class="toast" id="toast" role="status"></div>
+    </div>
+
+    <div class="rotate-hint" id="rotate-hint" hidden>
+      <p>Rotate to landscape</p>
+      <span>Moonlit Grove plays sideways</span>
+    </div>
+
+    <div class="story-modal" id="story-modal" hidden>
+      <div class="story-card">
+        <p class="story-kicker" id="story-kicker">Chapter</p>
+        <h2 id="story-title">Title</h2>
+        <p id="story-body">Body</p>
+        <button type="button" class="story-continue" id="story-continue">Let's go!</button>
+      </div>
+    </div>
+
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>
