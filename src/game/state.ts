@@ -227,7 +227,7 @@ export function plantAt(state: GameState, index: number): string | null {
   const seed = state.selectedSeed
   if (!seed) return 'Pick a seed first.'
   if (!isCropUnlocked(state, seed)) return 'Reach a higher grove rank to unlock this crop.'
-  if (state.inventory[seed] <= 0) return 'No seeds left — buy more in the satchel.'
+  if (state.inventory[seed] <= 0) return 'No seeds left — buy more on the right.'
 
   state.inventory[seed] -= 1
   state.plots[index] = { kind: 'growing', crop: seed, plantedAt: Date.now() }

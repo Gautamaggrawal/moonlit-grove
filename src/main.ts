@@ -53,6 +53,7 @@ const readyBadge = document.querySelector<HTMLElement>('#ready-badge')!
 const dailyBtn = document.querySelector('#daily-btn')!
 const storyRail = document.querySelector<HTMLElement>('#story-rail')!
 const groveTitle = document.querySelector('#grove-title')!
+const playTip = document.querySelector<HTMLElement>('#play-tip')!
 const storyModal = document.querySelector<HTMLElement>('#story-modal')!
 const storyKicker = document.querySelector('#story-kicker')!
 const storyTitle = document.querySelector('#story-title')!
@@ -60,10 +61,10 @@ const storyBody = document.querySelector('#story-body')!
 const storyContinue = document.querySelector('#story-continue')!
 
 const PANEL_COPY: Record<PanelId, { title: string; sub: string }> = {
-  farm: { title: 'Farm', sub: 'Plant → harvest → sell → expand' },
-  barn: { title: 'Barn', sub: 'Befriend and care for grove animals' },
-  workshop: { title: 'Workshop', sub: 'Craft feed and magical goods' },
-  quests: { title: 'Quests', sub: 'Earn rewards as your grove grows' },
+  farm: { title: 'Farm', sub: 'Tap grass · tap glow · sell' },
+  barn: { title: 'Barn', sub: 'Feed animals for gifts' },
+  workshop: { title: 'Craft', sub: 'Turn crops into feed' },
+  quests: { title: 'Quests', sub: 'Goals & rewards' },
 }
 
 let state = loadState()
@@ -187,9 +188,32 @@ function refreshPanel(full = true): void {
   panelSub.textContent = PANEL_COPY[activePanel].sub
 }
 
-function groveLabel(): string {
-  const labels = ['misted clearing', 'small glade', 'moon meadow', 'star orchard', 'full grove']
-  return labels[Math.min(4, state.expandTier)]
+function tipForState(): string {
+  const ready = countReady(state)
+  const cellar = Object.values(state.produce).reduce((a, b) => a + b, 0)
+  switch (state.storyStep) {
+    case 'welcome':
+    case 'plant':
+      return '👉 Tap green grass to plant a seed'
+    case 'wait':
+      return '⏳ Wait for the ring to fill…'
+    case 'harvest':
+      return ready ? '✨ Tap the glowing crop to harvest' : '✨ Crops will glow when ready — tap them'
+    case 'earn':
+      return cellar ? '💰 Press Sell all in the Farm panel' : '💰 Harvest first, then sell'
+    case 'expand':
+      return '🗺️ Press Expand land to clear the mist'
+    default:
+      if (ready) return `✨ ${ready} ready — tap glowing crops`
+      if (cellar) return '💰 Sell crops in the Farm panel for coins'
+      if (state.toolMode === 'decorate') return '🏮 Decorate mode — tap empty grass'
+      return '🌱 Tap grass to plant · tap glow to harvest'
+  }
+}
+
+function updatePlayTip(): void {
+  playTip.textContent = tipForState()
+  playTip.dataset.step = state.storyStep
 }
 
 function updateHud({ panel = false }: { panel?: boolean } = {}) {
@@ -207,16 +231,23 @@ function updateHud({ panel = false }: { panel?: boolean } = {}) {
   xpText.textContent = `${xp.current} / ${xp.next} XP`
 
   const ready = countReady(state)
-  readyBadge.textContent = ready === 1 ? '1 ready' : `${ready} ready`
+  readyBadge.textContent = ready === 0 ? '' : ready === 1 ? 'Tap to harvest!' : `${ready} ready — tap!`
   readyBadge.classList.toggle('pulse', ready > 0)
+  readyBadge.hidden = ready === 0
   groveTitle.textContent = `Your grove · ${groveLabel()}`
 
   dailyBtn.classList.toggle('claimed', state.dailyLastClaim === new Date().toISOString().slice(0, 10))
 
   renderStoryRail()
+  updatePlayTip()
   maybeShowStoryForStep()
 
   if (panel) refreshPanel(true)
+}
+
+function groveLabel(): string {
+  const labels = ['misted clearing', 'small glade', 'moon meadow', 'star orchard', 'full grove']
+  return labels[Math.min(4, state.expandTier)]
 }
 
 document.querySelectorAll<HTMLButtonElement>('.tab').forEach((btn) => {
@@ -233,7 +264,9 @@ panelBody.addEventListener('click', (e) => {
 
   const tool = t.closest('[data-tool]') as HTMLElement | null
   if (tool?.dataset.tool) {
-    state.toolMode = tool.dataset.tool as ToolMode
+    const mode = tool.dataset.tool as ToolMode
+    state.toolMode = state.toolMode === mode && mode === 'decorate' ? 'plant' : mode
+    updatePlayTip()
     refreshPanel(true)
     return
   }
@@ -255,6 +288,7 @@ panelBody.addEventListener('click', (e) => {
   if (seedSel?.dataset.select) {
     state.selectedSeed = seedSel.dataset.select as CropId
     state.toolMode = 'plant'
+    updatePlayTip()
     refreshPanel(true)
     return
   }
@@ -400,33 +434,44 @@ function actOnTile(clientX: number, clientY: number) {
 
   const world = screenToWorld(camera, canvas, clientX, clientY, VIEW_W, VIEW_H)
   const index = hitTest(state, world.x, world.y)
-  if (index === null) return
+  if (index === null) {
+    showToast('Drag to look around · tap a grass tile', 'info')
+    return
+  }
 
   if (!plotUnlocked(state, index)) {
-    showToast('Mist locks this soil — Expand in the Farm tab.', 'warn')
+    showToast('Grey mist is locked — sell crops, then Expand', 'warn')
     return
   }
 
   const plot = state.plots[index]
   const { x, y } = plotCenter(index, state)
 
-  if (state.toolMode === 'harvest' || plot.kind === 'ready') {
-    if (plot.kind !== 'ready') {
-      showToast('No ripe crop here.', 'warn')
-      return
-    }
+  // Smart tap: ready crops always harvest
+  if (plot.kind === 'ready') {
     const def = CROPS[plot.crop]
     const err = harvestAt(state, index)
     if (err) showToast(err, 'warn')
     else {
       spawnHarvestSpark(x, y, def.glow, sparks)
       spawnFloater(x, y - 20, `+1 ${def.name}`, def.glow, floaters)
-      showToast(`${def.name} joins your cellar.`, 'success')
+      showToast('Harvested! Sell it in the Farm panel →', 'success')
       updateHud({ panel: true })
     }
     return
   }
 
+  if (plot.kind === 'growing') {
+    showToast('Still growing — wait for the sparkle', 'info')
+    return
+  }
+
+  if (plot.kind === 'decor') {
+    showToast('Decoration here — try empty grass', 'info')
+    return
+  }
+
+  // Empty plot
   if (state.toolMode === 'decorate') {
     const err = placeDecorAt(state, index)
     if (err) showToast(err, 'warn')
@@ -434,6 +479,15 @@ function actOnTile(clientX: number, clientY: number) {
       spawnFloater(x, y, 'Placed', '#c4b5fd', floaters)
       updateHud({ panel: activePanel === 'farm' })
     }
+    return
+  }
+
+  if (!state.selectedSeed) {
+    state.selectedSeed = 'blossom'
+  }
+  if (state.inventory[state.selectedSeed] <= 0) {
+    showToast('Out of seeds — buy more on the right →', 'warn')
+    updateHud({ panel: true })
     return
   }
 

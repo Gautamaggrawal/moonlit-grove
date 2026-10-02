@@ -164,6 +164,23 @@ function drawWorld(
             ctx.closePath()
             ctx.stroke()
             ctx.restore()
+          } else if (
+            unlocked &&
+            state.plots[i].kind === 'empty' &&
+            (state.storyStep === 'plant' || state.storyStep === 'welcome')
+          ) {
+            const pulse = 0.25 + Math.sin(now / 350) * 0.15
+            ctx.save()
+            ctx.strokeStyle = `rgba(255, 255, 255, ${pulse})`
+            ctx.lineWidth = 2
+            ctx.beginPath()
+            ctx.moveTo(cx, cy - 8)
+            ctx.lineTo(cx + 48, cy + 16)
+            ctx.lineTo(cx, cy + 40)
+            ctx.lineTo(cx - 48, cy + 16)
+            ctx.closePath()
+            ctx.stroke()
+            ctx.restore()
           }
         },
       })

@@ -4,7 +4,7 @@ import { DECORS } from '../game/decorations'
 import { RECIPE_LIST, RECIPES } from '../game/recipes'
 import { nextExpandCost } from '../game/story'
 import { isCropUnlocked, isDecorUnlocked, levelFromXp, visibleQuests } from '../game/state'
-import type { CropId, GameState, PanelId, ToolMode } from '../game/types'
+import type { CropId, GameState, PanelId } from '../game/types'
 
 export function renderPanel(panel: PanelId, state: GameState): string {
   switch (panel) {
@@ -19,18 +19,11 @@ export function renderPanel(panel: PanelId, state: GameState): string {
   }
 }
 
-function toolBtn(mode: ToolMode, current: ToolMode, label: string, icon: string): string {
-  return `<button type="button" class="tool-btn ${current === mode ? 'active' : ''}" data-tool="${mode}">
-    <span aria-hidden="true">${icon}</span>${label}
-  </button>`
-}
-
 function renderFarmPanel(state: GameState): string {
-  const tools = `<div class="tool-row">
-    ${toolBtn('plant', state.toolMode, 'Plant', '🌱')}
-    ${toolBtn('harvest', state.toolMode, 'Harvest', '✦')}
-    ${toolBtn('decorate', state.toolMode, 'Decorate', '🏮')}
-  </div>`
+  const seed = state.selectedSeed ? CROPS[state.selectedSeed] : null
+  const seedLine = seed
+    ? `<p class="guide">Selected: <strong>${seed.name}</strong> ×${state.inventory[state.selectedSeed!]} — tap grass to plant</p>`
+    : `<p class="guide">Pick a seed below, then tap grass</p>`
 
   const crops = CROP_LIST.map((c) => {
     const locked = !isCropUnlocked(state, c.id)
@@ -51,29 +44,36 @@ function renderFarmPanel(state: GameState): string {
   const cellarCount = CROP_LIST.reduce((n, c) => n + state.produce[c.id], 0)
   const expandCost = nextExpandCost(state.expandTier)
   const canExpand = state.storyStep === 'expand' || state.storyStep === 'free'
+  const needSell = state.storyStep === 'earn' || cellarCount > 0
+  const needExpand = state.storyStep === 'expand'
+
   const expandBlock =
     expandCost === null
       ? ''
-      : `<button type="button" class="expand-btn ${canExpand ? '' : 'dim'}" data-expand ${canExpand ? '' : 'disabled'}>
-          Expand · ${expandCost}✦
+      : `<button type="button" class="expand-btn ${canExpand ? '' : 'dim'} ${needExpand ? 'pulse-cta' : ''}" data-expand ${canExpand ? '' : 'disabled'}>
+          Expand land · ${expandCost}✦
         </button>`
 
   const mushroom = DECORS.mushroom
   const decorLocked = !isDecorUnlocked(state, 'mushroom')
-  const decorLine = `<button type="button" class="decor-buy-line" data-buy-decor="mushroom" ${decorLocked ? 'disabled' : ''}>
-    🍄 Decor ×${state.decorInventory.mushroom} · buy ${mushroom.price}✦
-  </button>`
 
   return `
-    ${tools}
+    ${seedLine}
     ${expandBlock}
-    <h3 class="section-label">Seeds</h3>
+    <h3 class="section-label">Seeds (tap to select)</h3>
     <div class="shop-list">${crops}</div>
-    ${decorLine}
-    <div class="cellar-bar">
-      <span>${cellarCount ? `${cellarCount} in cellar` : 'Cellar empty'}</span>
-      <button type="button" class="sell-all-btn" data-sell-all ${cellarCount ? '' : 'disabled'}>Sell all</button>
+    <div class="cellar-bar ${needSell ? 'highlight' : ''}">
+      <span>${cellarCount ? `${cellarCount} ready to sell` : 'Nothing to sell yet'}</span>
+      <button type="button" class="sell-all-btn ${needSell && cellarCount ? 'pulse-cta' : ''}" data-sell-all ${cellarCount ? '' : 'disabled'}>
+        Sell all
+      </button>
     </div>
+    <button type="button" class="decor-buy-line" data-buy-decor="mushroom" ${decorLocked ? 'disabled' : ''}>
+      🍄 Buy decor · ${mushroom.price}✦ (×${state.decorInventory.mushroom})
+    </button>
+    <button type="button" class="decor-mode-btn ${state.toolMode === 'decorate' ? 'active' : ''}" data-tool="decorate">
+      ${state.toolMode === 'decorate' ? 'Decorating on — tap grass' : 'Place decor mode'}
+    </button>
   `
 }
 
