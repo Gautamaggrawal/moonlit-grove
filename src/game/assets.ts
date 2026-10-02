@@ -44,9 +44,10 @@ function loadImage(src: string): Promise<HTMLImageElement> {
 
 export async function loadFarmSprites(): Promise<void> {
   images.clear()
+  const base = import.meta.env.BASE_URL
   await Promise.all(
     FILES.map(async (key) => {
-      const img = await loadImage(`/sprites/cute/${key}.png`)
+      const img = await loadImage(`${base}sprites/cute/${key}.png`)
       images.set(key, img)
     }),
   )
